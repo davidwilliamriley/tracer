@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic
+pydantic-settings
+httpx        # needed for testing FastAPI's TestClient
+pytest
+pytest-asyncio
