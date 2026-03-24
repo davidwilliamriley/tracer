@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Generic, List, TypeVar
 from fastapi import Query
 
@@ -24,6 +24,7 @@ class Page(BaseModel, Generic[T]):
             items, total = crud.node_type.get_page(db, skip=params.skip, limit=params.limit)
             return Page.create(items, total, params)
     """
+
     items: List[T]
     total: int
     skip: int
@@ -31,7 +32,9 @@ class Page(BaseModel, Generic[T]):
     has_more: bool
 
     @classmethod
-    def create(cls, items: List[T], total: int, params: "PaginationParams") -> "Page[T]":
+    def create(
+        cls, items: List[T], total: int, params: "PaginationParams"
+    ) -> "Page[T]":
         return cls(
             items=items,
             total=total,
@@ -40,8 +43,7 @@ class Page(BaseModel, Generic[T]):
             has_more=(params.skip + len(items)) < total,
         )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PaginationParams:
@@ -53,10 +55,13 @@ class PaginationParams:
         def list_items(params: PaginationParams = Depends()):
             ...
     """
+
     def __init__(
         self,
         skip: int = Query(default=0, ge=0, description="Number of records to skip"),
-        limit: int = Query(default=20, ge=1, le=200, description="Max records to return"),
+        limit: int = Query(
+            default=20, ge=1, le=200, description="Max records to return"
+        ),
     ):
         self.skip = skip
         self.limit = limit

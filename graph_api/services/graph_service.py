@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 from uuid import UUID, uuid4
 from sqlalchemy.orm import Session
 
@@ -32,7 +32,7 @@ import crud
 def _build_property_detail(
     assignment,
     definition,
-    value_obj: Optional[NodePropertyValue | EdgePropertyValue],
+    value_obj: Optional[Union[NodePropertyValue, EdgePropertyValue]],
 ) -> PropertyValueDetail:
     """
     Merge an assignment, its definition, and an optional value row

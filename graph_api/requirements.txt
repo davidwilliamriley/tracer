@@ -1,8 +1,11 @@
+# Runtime Dependencies
 fastapi
 uvicorn[standard]
 sqlalchemy
 pydantic
 pydantic-settings
+
+# Development & Test Dependencies
 httpx
 pytest
 pytest-asyncio

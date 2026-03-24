@@ -55,6 +55,7 @@ app.add_middleware(
 # Exception handlers
 # ---------------------------------------------------------------------------
 
+
 @app.exception_handler(TracerException)
 async def tracer_exception_handler(request: Request, exc: TracerException):
     """
@@ -85,7 +86,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         field_errors.append(FieldError(field=field, message=error["msg"]))
 
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content=ValidationErrorResponse(errors=field_errors).model_dump(),
     )
 
@@ -105,6 +106,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
             "status_code": 500,
         },
     )
+
 
 # ---------------------------------------------------------------------------
 # Routers
@@ -130,6 +132,7 @@ app.include_router(edge_property_value.router)
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
+
 
 @app.get("/", tags=["Health"])
 def root():

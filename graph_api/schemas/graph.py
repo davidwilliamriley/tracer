@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 from datetime import datetime
@@ -9,25 +9,27 @@ from datetime import datetime
 # Used inside NodeFull and EdgeFull so the frontend has everything in one hit
 # ---------------------------------------------------------------------------
 
+
 class PropertyValueDetail(BaseModel):
     """A single property value with its definition metadata."""
+
     value_id: UUID
     definition_id: UUID
     identifier: str
     name: str
     description: Optional[str]
-    type: str                        # "string" | "integer" | "float" | "boolean" | "date"
-    value: Optional[str]             # raw stored value (always string, cast on client)
+    type: str  # "string" | "integer" | "float" | "boolean" | "date"
+    value: Optional[str]  # raw stored value (always string, cast on client)
     is_required: bool
     sort_order: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ---------------------------------------------------------------------------
 # Node with all property values — the compound read for the node editor
 # ---------------------------------------------------------------------------
+
 
 class NodeFull(BaseModel):
     """
@@ -35,6 +37,7 @@ class NodeFull(BaseModel):
     Returned by GET /nodes/{id}/full.
     The frontend can render the node editor form directly from this response.
     """
+
     id: UUID
     node_identifier: str
     node_name: str
@@ -47,13 +50,13 @@ class NodeFull(BaseModel):
     modified_by: Optional[str]
     modified_on: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ---------------------------------------------------------------------------
 # Edge with all property values — the compound read for the edge editor
 # ---------------------------------------------------------------------------
+
 
 class EdgeFull(BaseModel):
     """
@@ -61,6 +64,7 @@ class EdgeFull(BaseModel):
     and all property values resolved.
     Returned by GET /edges/{id}/full.
     """
+
     id: UUID
     edge_identifier: str
     edge_name: str
@@ -79,27 +83,28 @@ class EdgeFull(BaseModel):
     modified_by: Optional[str]
     modified_on: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ---------------------------------------------------------------------------
 # Form schema — what the frontend calls to build a dynamic editor form
 # ---------------------------------------------------------------------------
 
+
 class FormField(BaseModel):
     """
     A single field in a dynamic editor form.
     The frontend uses this to decide what input to render and how to validate it.
     """
+
     assignment_id: UUID
     definition_id: UUID
     identifier: str
     name: str
     description: Optional[str]
-    type: str                        # "string" | "integer" | "float" | "boolean" | "date"
+    type: str  # "string" | "integer" | "float" | "boolean" | "date"
     is_required: bool
-    default_value: Optional[str]     # type-level default (overrides definition default)
+    default_value: Optional[str]  # type-level default (overrides definition default)
     sort_order: int
 
 
@@ -109,18 +114,21 @@ class FormSchema(BaseModel):
     Returned by GET /node-types/{id}/form-schema
                 and GET /edge-types/{id}/form-schema.
     """
+
     type_id: UUID
     type_identifier: str
     type_name: str
-    fields: List[FormField]          # ordered by sort_order
+    fields: List[FormField]  # ordered by sort_order
 
 
 # ---------------------------------------------------------------------------
 # Bulk property write — saves all property values for a node/edge in one call
 # ---------------------------------------------------------------------------
 
+
 class PropertyValueInput(BaseModel):
     """One property value in a bulk write request."""
+
     definition_id: UUID
     value: Optional[str] = None
 
@@ -130,6 +138,7 @@ class BulkPropertyWrite(BaseModel):
     Body for POST /nodes/{id}/properties and POST /edges/{id}/properties.
     Replaces the need to make N individual property value API calls when saving a form.
     """
+
     properties: List[PropertyValueInput]
     modified_by: Optional[str] = None
 
@@ -138,8 +147,10 @@ class BulkPropertyWrite(BaseModel):
 # Graph topology — what the canvas needs to render the full graph
 # ---------------------------------------------------------------------------
 
+
 class GraphNode(BaseModel):
     """A node in canvas-ready format."""
+
     id: UUID
     identifier: str
     name: str
@@ -150,14 +161,15 @@ class GraphNode(BaseModel):
 
 class GraphEdge(BaseModel):
     """An edge in canvas-ready format."""
+
     id: UUID
     identifier: str
     name: str
     type_id: UUID
     type_identifier: str
     type_name: str
-    source: UUID                     # source node id
-    target: UUID                     # target node id
+    source: UUID  # source node id
+    target: UUID  # target node id
 
 
 class GraphTopology(BaseModel):
@@ -166,6 +178,7 @@ class GraphTopology(BaseModel):
     Returned by GET /graph.
     Directly consumable by Cytoscape.js and react-flow.
     """
+
     nodes: List[GraphNode]
     edges: List[GraphEdge]
     node_count: int
