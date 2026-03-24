@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
@@ -8,6 +8,8 @@ from schemas.node_type_property_assignment import (
     NodeTypePropertyAssignmentUpdate,
     NodeTypePropertyAssignmentResponse,
 )
+from schemas.pagination import Page, PaginationParams
+from exceptions import NotFoundError, ConflictError
 import crud
 
 router = APIRouter(
@@ -16,22 +18,25 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=List[NodeTypePropertyAssignmentResponse])
-def list_assignments(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return crud.node_type_property_assignment.get_multi(db, skip=skip, limit=limit)
+@router.get("/", response_model=Page[NodeTypePropertyAssignmentResponse])
+def list_assignments(
+    params: PaginationParams = Depends(), db: Session = Depends(get_db)
+):
+    items, total = crud.node_type_property_assignment.get_page(
+        db, skip=params.skip, limit=params.limit
+    )
+    return Page.create(items, total, params)
 
 
 @router.get(
     "/by-node-type/{node_type_id}",
     response_model=List[NodeTypePropertyAssignmentResponse],
 )
-def list_assignments_by_node_type(
-    node_type_id: UUID, db: Session = Depends(get_db)
-):
-    """Return all property assignments for a NodeType, ordered by sort_order.
-    This is the key endpoint for building dynamic forms in the frontend."""
+def list_assignments_by_node_type(node_type_id: UUID, db: Session = Depends(get_db)):
+    """Return all property assignments for a NodeType ordered by sort_order.
+    This is the key endpoint for building dynamic node editor forms."""
     if not crud.node_type.get(db, node_type_id):
-        raise HTTPException(status_code=404, detail="NodeType not found")
+        raise NotFoundError("NodeType", node_type_id)
     return crud.node_type_property_assignment.get_by_node_type(db, node_type_id)
 
 
@@ -39,7 +44,7 @@ def list_assignments_by_node_type(
 def get_assignment(assignment_id: UUID, db: Session = Depends(get_db)):
     obj = crud.node_type_property_assignment.get(db, assignment_id)
     if not obj:
-        raise HTTPException(status_code=404, detail="Assignment not found")
+        raise NotFoundError("NodeTypePropertyAssignment", assignment_id)
     return obj
 
 
@@ -48,19 +53,15 @@ def create_assignment(
     payload: NodeTypePropertyAssignmentCreate, db: Session = Depends(get_db)
 ):
     if not crud.node_type.get(db, payload.node_type_id_fk):
-        raise HTTPException(status_code=404, detail="NodeType not found")
+        raise NotFoundError("NodeType", payload.node_type_id_fk)
     if not crud.node_property_definition.get(db, payload.node_property_definition_id_fk):
-        raise HTTPException(status_code=404, detail="NodePropertyDefinition not found")
-    existing = crud.node_type_property_assignment.get_existing(
+        raise NotFoundError("NodePropertyDefinition", payload.node_property_definition_id_fk)
+    if crud.node_type_property_assignment.get_existing(
         db,
         node_type_id=payload.node_type_id_fk,
         node_property_definition_id=payload.node_property_definition_id_fk,
-    )
-    if existing:
-        raise HTTPException(
-            status_code=400,
-            detail="This property is already assigned to this node type"
-        )
+    ):
+        raise ConflictError("This property is already assigned to this node type")
     return crud.node_type_property_assignment.create(db, obj_in=payload)
 
 
@@ -72,7 +73,7 @@ def update_assignment(
 ):
     obj = crud.node_type_property_assignment.get(db, assignment_id)
     if not obj:
-        raise HTTPException(status_code=404, detail="Assignment not found")
+        raise NotFoundError("NodeTypePropertyAssignment", assignment_id)
     return crud.node_type_property_assignment.update(db, db_obj=obj, obj_in=payload)
 
 
@@ -80,5 +81,5 @@ def update_assignment(
 def delete_assignment(assignment_id: UUID, db: Session = Depends(get_db)):
     obj = crud.node_type_property_assignment.get(db, assignment_id)
     if not obj:
-        raise HTTPException(status_code=404, detail="Assignment not found")
+        raise NotFoundError("NodeTypePropertyAssignment", assignment_id)
     return crud.node_type_property_assignment.remove(db, id=assignment_id)

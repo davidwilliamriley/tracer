@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
@@ -8,23 +8,27 @@ from schemas.edge_property_value import (
     EdgePropertyValueUpdate,
     EdgePropertyValueResponse,
 )
+from schemas.pagination import Page, PaginationParams
+from exceptions import NotFoundError
 import crud
 
 router = APIRouter(prefix="/edge-property-values", tags=["Edge Property Values"])
 
 
-@router.get("/", response_model=List[EdgePropertyValueResponse])
+@router.get("/", response_model=Page[EdgePropertyValueResponse])
 def list_edge_property_values(
-    skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
+    params: PaginationParams = Depends(), db: Session = Depends(get_db)
 ):
-    return crud.edge_property_value.get_multi(db, skip=skip, limit=limit)
+    items, total = crud.edge_property_value.get_page(
+        db, skip=params.skip, limit=params.limit
+    )
+    return Page.create(items, total, params)
 
 
 @router.get("/by-edge/{edge_id}", response_model=List[EdgePropertyValueResponse])
 def list_values_by_edge(edge_id: UUID, db: Session = Depends(get_db)):
-    """Return all property values for a given edge."""
     if not crud.edge.get(db, edge_id):
-        raise HTTPException(status_code=404, detail="Edge not found")
+        raise NotFoundError("Edge", edge_id)
     return crud.edge_property_value.get_by_edge(db, edge_id)
 
 
@@ -32,7 +36,7 @@ def list_values_by_edge(edge_id: UUID, db: Session = Depends(get_db)):
 def get_edge_property_value(value_id: UUID, db: Session = Depends(get_db)):
     obj = crud.edge_property_value.get(db, value_id)
     if not obj:
-        raise HTTPException(status_code=404, detail="EdgePropertyValue not found")
+        raise NotFoundError("EdgePropertyValue", value_id)
     return obj
 
 
@@ -40,11 +44,11 @@ def get_edge_property_value(value_id: UUID, db: Session = Depends(get_db)):
 def create_or_update_edge_property_value(
     payload: EdgePropertyValueCreate, db: Session = Depends(get_db)
 ):
-    """Create a property value, or update it if one already exists for this edge+definition pair."""
+    """Create or update a property value (upsert by edge + definition pair)."""
     if not crud.edge.get(db, payload.edge_id_fk):
-        raise HTTPException(status_code=404, detail="Edge not found")
+        raise NotFoundError("Edge", payload.edge_id_fk)
     if not crud.edge_property_definition.get(db, payload.edge_property_definition_id_fk):
-        raise HTTPException(status_code=404, detail="EdgePropertyDefinition not found")
+        raise NotFoundError("EdgePropertyDefinition", payload.edge_property_definition_id_fk)
     return crud.edge_property_value.upsert(db, obj_in=payload)
 
 
@@ -54,7 +58,7 @@ def update_edge_property_value(
 ):
     obj = crud.edge_property_value.get(db, value_id)
     if not obj:
-        raise HTTPException(status_code=404, detail="EdgePropertyValue not found")
+        raise NotFoundError("EdgePropertyValue", value_id)
     return crud.edge_property_value.update(db, db_obj=obj, obj_in=payload)
 
 
@@ -62,5 +66,5 @@ def update_edge_property_value(
 def delete_edge_property_value(value_id: UUID, db: Session = Depends(get_db)):
     obj = crud.edge_property_value.get(db, value_id)
     if not obj:
-        raise HTTPException(status_code=404, detail="EdgePropertyValue not found")
+        raise NotFoundError("EdgePropertyValue", value_id)
     return crud.edge_property_value.remove(db, id=value_id)

@@ -1,24 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 from database import get_db
 from schemas.node import NodeCreate, NodeUpdate, NodeResponse
+from schemas.pagination import Page, PaginationParams
+from exceptions import NotFoundError, ConflictError, DependencyError
 import crud
 
 router = APIRouter(prefix="/nodes", tags=["Nodes"])
 
 
-@router.get("/", response_model=List[NodeResponse])
-def list_nodes(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return crud.node.get_multi(db, skip=skip, limit=limit)
+@router.get("/", response_model=Page[NodeResponse])
+def list_nodes(params: PaginationParams = Depends(), db: Session = Depends(get_db)):
+    items, total = crud.node.get_page(db, skip=params.skip, limit=params.limit)
+    return Page.create(items, total, params)
 
 
 @router.get("/by-type/{node_type_id}", response_model=List[NodeResponse])
 def list_nodes_by_type(node_type_id: UUID, db: Session = Depends(get_db)):
-    """Return all nodes of a given NodeType."""
     if not crud.node_type.get(db, node_type_id):
-        raise HTTPException(status_code=404, detail="NodeType not found")
+        raise NotFoundError("NodeType", node_type_id)
     return crud.node.get_by_node_type(db, node_type_id)
 
 
@@ -26,16 +28,19 @@ def list_nodes_by_type(node_type_id: UUID, db: Session = Depends(get_db)):
 def get_node(node_id: UUID, db: Session = Depends(get_db)):
     obj = crud.node.get(db, node_id)
     if not obj:
-        raise HTTPException(status_code=404, detail="Node not found")
+        raise NotFoundError("Node", node_id)
     return obj
 
 
 @router.post("/", response_model=NodeResponse, status_code=201)
 def create_node(payload: NodeCreate, db: Session = Depends(get_db)):
     if not crud.node_type.get(db, payload.node_type_id_fk):
-        raise HTTPException(status_code=404, detail="NodeType not found")
+        raise NotFoundError("NodeType", payload.node_type_id_fk)
     if crud.node.get_by_identifier(db, payload.node_identifier):
-        raise HTTPException(status_code=400, detail="Node identifier already exists")
+        raise ConflictError(
+            f"Node with identifier '{payload.node_identifier}' already exists",
+            field="node_identifier",
+        )
     return crud.node.create(db, obj_in=payload)
 
 
@@ -43,7 +48,7 @@ def create_node(payload: NodeCreate, db: Session = Depends(get_db)):
 def update_node(node_id: UUID, payload: NodeUpdate, db: Session = Depends(get_db)):
     obj = crud.node.get(db, node_id)
     if not obj:
-        raise HTTPException(status_code=404, detail="Node not found")
+        raise NotFoundError("Node", node_id)
     return crud.node.update(db, db_obj=obj, obj_in=payload)
 
 
@@ -51,15 +56,11 @@ def update_node(node_id: UUID, payload: NodeUpdate, db: Session = Depends(get_db
 def delete_node(node_id: UUID, db: Session = Depends(get_db)):
     obj = crud.node.get(db, node_id)
     if not obj:
-        raise HTTPException(status_code=404, detail="Node not found")
-    # Warn if node has edges — cascades will remove them
+        raise NotFoundError("Node", node_id)
     edge_count = len(obj.outgoing_edges) + len(obj.incoming_edges)
     if edge_count > 0:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Cannot delete: node has {edge_count} connected edge(s). "
-                "Delete edges first or use force-delete."
-            )
+        raise DependencyError(
+            f"Cannot delete: node has {edge_count} connected edge(s). "
+            "Delete connected edges first."
         )
     return crud.node.remove(db, id=node_id)

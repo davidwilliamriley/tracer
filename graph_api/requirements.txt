@@ -3,6 +3,6 @@ uvicorn[standard]
 sqlalchemy
 pydantic
 pydantic-settings
-httpx        
+httpx
 pytest
 pytest-asyncio

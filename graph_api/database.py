@@ -6,7 +6,7 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///./graph.db"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False}  # SQLite-specific, not needed for Postgres
+    connect_args={"check_same_thread": False}
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

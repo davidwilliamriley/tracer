@@ -31,6 +31,17 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     ) -> List[ModelType]:
         return db.query(self.model).offset(skip).limit(limit).all()
 
+    def get_page(
+        self, db: Session, *, skip: int = 0, limit: int = 20
+    ) -> tuple[List[ModelType], int]:
+        """
+        Returns (items, total) for paginated responses.
+        Runs two queries: one for the page, one for the total count.
+        """
+        total = db.query(self.model).count()
+        items = db.query(self.model).offset(skip).limit(limit).all()
+        return items, total
+
     def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
         obj_data = obj_in.model_dump()
         # Convert any UUID fields to strings for SQLite compatibility

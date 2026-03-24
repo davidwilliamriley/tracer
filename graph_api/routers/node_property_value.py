@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
@@ -8,23 +8,27 @@ from schemas.node_property_value import (
     NodePropertyValueUpdate,
     NodePropertyValueResponse,
 )
+from schemas.pagination import Page, PaginationParams
+from exceptions import NotFoundError
 import crud
 
 router = APIRouter(prefix="/node-property-values", tags=["Node Property Values"])
 
 
-@router.get("/", response_model=List[NodePropertyValueResponse])
+@router.get("/", response_model=Page[NodePropertyValueResponse])
 def list_node_property_values(
-    skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
+    params: PaginationParams = Depends(), db: Session = Depends(get_db)
 ):
-    return crud.node_property_value.get_multi(db, skip=skip, limit=limit)
+    items, total = crud.node_property_value.get_page(
+        db, skip=params.skip, limit=params.limit
+    )
+    return Page.create(items, total, params)
 
 
 @router.get("/by-node/{node_id}", response_model=List[NodePropertyValueResponse])
 def list_values_by_node(node_id: UUID, db: Session = Depends(get_db)):
-    """Return all property values for a given node."""
     if not crud.node.get(db, node_id):
-        raise HTTPException(status_code=404, detail="Node not found")
+        raise NotFoundError("Node", node_id)
     return crud.node_property_value.get_by_node(db, node_id)
 
 
@@ -32,7 +36,7 @@ def list_values_by_node(node_id: UUID, db: Session = Depends(get_db)):
 def get_node_property_value(value_id: UUID, db: Session = Depends(get_db)):
     obj = crud.node_property_value.get(db, value_id)
     if not obj:
-        raise HTTPException(status_code=404, detail="NodePropertyValue not found")
+        raise NotFoundError("NodePropertyValue", value_id)
     return obj
 
 
@@ -40,12 +44,11 @@ def get_node_property_value(value_id: UUID, db: Session = Depends(get_db)):
 def create_or_update_node_property_value(
     payload: NodePropertyValueCreate, db: Session = Depends(get_db)
 ):
-    """Create a property value, or update it if one already exists for this node+definition pair.
-    This upsert behaviour matches the natural workflow of saving a node form."""
+    """Create or update a property value (upsert by node + definition pair)."""
     if not crud.node.get(db, payload.node_id_fk):
-        raise HTTPException(status_code=404, detail="Node not found")
+        raise NotFoundError("Node", payload.node_id_fk)
     if not crud.node_property_definition.get(db, payload.node_property_definition_id_fk):
-        raise HTTPException(status_code=404, detail="NodePropertyDefinition not found")
+        raise NotFoundError("NodePropertyDefinition", payload.node_property_definition_id_fk)
     return crud.node_property_value.upsert(db, obj_in=payload)
 
 
@@ -55,7 +58,7 @@ def update_node_property_value(
 ):
     obj = crud.node_property_value.get(db, value_id)
     if not obj:
-        raise HTTPException(status_code=404, detail="NodePropertyValue not found")
+        raise NotFoundError("NodePropertyValue", value_id)
     return crud.node_property_value.update(db, db_obj=obj, obj_in=payload)
 
 
@@ -63,5 +66,5 @@ def update_node_property_value(
 def delete_node_property_value(value_id: UUID, db: Session = Depends(get_db)):
     obj = crud.node_property_value.get(db, value_id)
     if not obj:
-        raise HTTPException(status_code=404, detail="NodePropertyValue not found")
+        raise NotFoundError("NodePropertyValue", value_id)
     return crud.node_property_value.remove(db, id=value_id)
