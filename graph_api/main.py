@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from database import engine
-import models                   
+import models  # ensures all models are registered with Base.metadata
 from database import Base
 from routers import (
     node_type,
@@ -21,7 +21,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Tracer Graph API",
-    description="Property Graph Database API.",
+    description="Property Graph DB API.",
     version="0.1.0",
 )
 

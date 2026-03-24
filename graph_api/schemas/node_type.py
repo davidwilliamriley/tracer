@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field
-from datetime import datetime
+from pydantic import BaseModel
 from typing import Optional
 from uuid import UUID
+from schemas.base import AuditSchema
 
 
 class NodeTypeBase(BaseModel):
@@ -20,12 +20,8 @@ class NodeTypeUpdate(BaseModel):
     modified_by: Optional[str] = None
 
 
-class NodeTypeResponse(NodeTypeBase):
-    id: UUID                          # UUID not int
-    created_by: Optional[str] = None
-    created_on: Optional[datetime] = None
-    modified_by: Optional[str] = None
-    modified_on: Optional[datetime] = None
+class NodeTypeResponse(NodeTypeBase, AuditSchema):
+    id: UUID
 
     class Config:
         from_attributes = True

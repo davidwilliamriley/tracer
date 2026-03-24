@@ -3,6 +3,6 @@ uvicorn[standard]
 sqlalchemy
 pydantic
 pydantic-settings
-httpx        # needed for testing FastAPI's TestClient
+httpx        
 pytest
 pytest-asyncio
