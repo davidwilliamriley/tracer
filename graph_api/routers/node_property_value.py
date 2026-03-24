@@ -10,6 +10,7 @@ from schemas.node_property_value import (
 )
 from schemas.pagination import Page, PaginationParams
 from exceptions import NotFoundError
+from services.validation_service import validate_property_value
 import crud
 
 router = APIRouter(prefix="/node-property-values", tags=["Node Property Values"])
@@ -47,8 +48,14 @@ def create_or_update_node_property_value(
     """Create or update a property value (upsert by node + definition pair)."""
     if not crud.node.get(db, payload.node_id_fk):
         raise NotFoundError("Node", payload.node_id_fk)
-    if not crud.node_property_definition.get(db, payload.node_property_definition_id_fk):
+    defn = crud.node_property_definition.get(db, payload.node_property_definition_id_fk)
+    if not defn:
         raise NotFoundError("NodePropertyDefinition", payload.node_property_definition_id_fk)
+    validate_property_value(
+        value=payload.node_property_value,
+        declared_type=defn.node_property_definition_type,
+        field_name=defn.node_property_definition_identifier,
+    )
     return crud.node_property_value.upsert(db, obj_in=payload)
 
 

@@ -3,6 +3,12 @@ from uuid import UUID, uuid4
 from sqlalchemy.orm import Session
 
 from exceptions import NotFoundError, ValidationError
+from services.validation_service import (
+    validate_node_property_values,
+    validate_edge_property_values,
+    check_required_node_properties,
+    check_required_edge_properties,
+)
 from models.node import Node
 from models.edge import Edge
 from models.node_type_property_assignment import NodeTypePropertyAssignment
@@ -325,6 +331,15 @@ def bulk_write_node_properties(
         if not crud.node_property_definition.get(db, item.definition_id):
             raise NotFoundError("NodePropertyDefinition", item.definition_id)
 
+    # Build values dict for validation: {definition_id_str: value}
+    values_dict = {str(item.definition_id): item.value for item in payload.properties}
+
+    # Validate each value against its declared type
+    validate_node_property_values(db, node.node_type_id_fk, values_dict)
+
+    # Check required fields are present
+    check_required_node_properties(db, node.node_type_id_fk, values_dict)
+
     # Upsert each value
     for item in payload.properties:
         existing = (
@@ -367,6 +382,15 @@ def bulk_write_edge_properties(
     for item in payload.properties:
         if not crud.edge_property_definition.get(db, item.definition_id):
             raise NotFoundError("EdgePropertyDefinition", item.definition_id)
+
+    # Build values dict for validation: {definition_id_str: value}
+    values_dict = {str(item.definition_id): item.value for item in payload.properties}
+
+    # Validate each value against its declared type
+    validate_edge_property_values(db, edge.edge_type_id_fk, values_dict)
+
+    # Check required fields are present
+    check_required_edge_properties(db, edge.edge_type_id_fk, values_dict)
 
     for item in payload.properties:
         existing = (

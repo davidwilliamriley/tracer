@@ -10,6 +10,7 @@ from schemas.edge_property_value import (
 )
 from schemas.pagination import Page, PaginationParams
 from exceptions import NotFoundError
+from services.validation_service import validate_property_value
 import crud
 
 router = APIRouter(prefix="/edge-property-values", tags=["Edge Property Values"])
@@ -47,8 +48,14 @@ def create_or_update_edge_property_value(
     """Create or update a property value (upsert by edge + definition pair)."""
     if not crud.edge.get(db, payload.edge_id_fk):
         raise NotFoundError("Edge", payload.edge_id_fk)
-    if not crud.edge_property_definition.get(db, payload.edge_property_definition_id_fk):
+    defn = crud.edge_property_definition.get(db, payload.edge_property_definition_id_fk)
+    if not defn:
         raise NotFoundError("EdgePropertyDefinition", payload.edge_property_definition_id_fk)
+    validate_property_value(
+        value=payload.edge_property_value,
+        declared_type=defn.edge_property_definition_type,
+        field_name=defn.edge_property_definition_identifier,
+    )
     return crud.edge_property_value.upsert(db, obj_in=payload)
 
 

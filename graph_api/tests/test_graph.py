@@ -242,10 +242,15 @@ def test_bulk_write_is_idempotent(client, seeded):
 def test_bulk_write_updates_existing_values(client, seeded):
     """Writing to a node that already has values should update them."""
     node_id = seeded["node1"]["id"]
+    prop_id = seeded["prop_id"]["id"]
     prop_sev = seeded["prop_severity"]["id"]
 
+    # Must include HAZ_ID (required) alongside SEVERITY
     client.post(f"/nodes/{node_id}/properties", json={
-        "properties": [{"definition_id": prop_sev, "value": "Low"}],
+        "properties": [
+            {"definition_id": prop_id, "value": "HAZ-001"},
+            {"definition_id": prop_sev, "value": "Low"},
+        ],
     })
 
     r = client.get(f"/nodes/{node_id}/full")

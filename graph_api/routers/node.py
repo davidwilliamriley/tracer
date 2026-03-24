@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 from database import get_db
 from schemas.node import NodeCreate, NodeUpdate, NodeResponse
@@ -12,8 +12,33 @@ router = APIRouter(prefix="/nodes", tags=["Nodes"])
 
 
 @router.get("/", response_model=Page[NodeResponse])
-def list_nodes(params: PaginationParams = Depends(), db: Session = Depends(get_db)):
-    items, total = crud.node.get_page(db, skip=params.skip, limit=params.limit)
+def list_nodes(
+    params: PaginationParams = Depends(),
+    node_type_identifier: Optional[str] = Query(
+        default=None,
+        description="Filter by exact NodeType identifier e.g. SAFETY_REQUIREMENT"
+    ),
+    name_contains: Optional[str] = Query(
+        default=None,
+        description="Filter nodes whose name contains this string (case-insensitive)"
+    ),
+    identifier_contains: Optional[str] = Query(
+        default=None,
+        description="Filter nodes whose identifier contains this string (case-insensitive)"
+    ),
+    db: Session = Depends(get_db),
+):
+    if any([node_type_identifier, name_contains, identifier_contains]):
+        items, total = crud.node.search(
+            db,
+            skip=params.skip,
+            limit=params.limit,
+            node_type_identifier=node_type_identifier,
+            name_contains=name_contains,
+            identifier_contains=identifier_contains,
+        )
+    else:
+        items, total = crud.node.get_page(db, skip=params.skip, limit=params.limit)
     return Page.create(items, total, params)
 
 

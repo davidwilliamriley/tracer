@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 from database import get_db
 from schemas.edge import EdgeCreate, EdgeUpdate, EdgeResponse
@@ -12,8 +12,38 @@ router = APIRouter(prefix="/edges", tags=["Edges"])
 
 
 @router.get("/", response_model=Page[EdgeResponse])
-def list_edges(params: PaginationParams = Depends(), db: Session = Depends(get_db)):
-    items, total = crud.edge.get_page(db, skip=params.skip, limit=params.limit)
+def list_edges(
+    params: PaginationParams = Depends(),
+    edge_type_identifier: Optional[str] = Query(
+        default=None,
+        description="Filter by exact EdgeType identifier e.g. CAUSES"
+    ),
+    name_contains: Optional[str] = Query(
+        default=None,
+        description="Filter edges whose name contains this string (case-insensitive)"
+    ),
+    source_node_id: Optional[UUID] = Query(
+        default=None,
+        description="Filter edges by source node ID"
+    ),
+    target_node_id: Optional[UUID] = Query(
+        default=None,
+        description="Filter edges by target node ID"
+    ),
+    db: Session = Depends(get_db),
+):
+    if any([edge_type_identifier, name_contains, source_node_id, target_node_id]):
+        items, total = crud.edge.search(
+            db,
+            skip=params.skip,
+            limit=params.limit,
+            edge_type_identifier=edge_type_identifier,
+            name_contains=name_contains,
+            source_node_id=source_node_id,
+            target_node_id=target_node_id,
+        )
+    else:
+        items, total = crud.edge.get_page(db, skip=params.skip, limit=params.limit)
     return Page.create(items, total, params)
 
 
