@@ -1,6 +1,7 @@
 # Virtual Env
 .venv/
 venv/
+.vscode/
 
 Tracer.code-workspace
 *.db
