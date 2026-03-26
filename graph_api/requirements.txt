@@ -1,4 +1,4 @@
-# Runtime Dependencies
+# Runtime dependencies
 fastapi
 uvicorn[standard]
 sqlalchemy
@@ -6,7 +6,12 @@ pydantic
 pydantic-settings
 networkx
 
-# Development & Test Dependencies
+# Development / testing
+# httpx is required by FastAPI's TestClient
 httpx
 pytest
 pytest-asyncio
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+alembic

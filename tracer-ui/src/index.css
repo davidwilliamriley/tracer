@@ -1,0 +1,4 @@
+@import "tailwindcss";
+
+/* React Flow requires these base styles */
+@import "@xyflow/react/dist/style.css";

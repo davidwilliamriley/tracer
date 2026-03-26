@@ -1,13 +1,18 @@
-from fastapi import FastAPI, Request, status
+from fastapi import Depends, FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 import models  # registers all models with Base.metadata
-from database import engine, Base
+from logging_config import configure_logging
+from middleware import RequestIDMiddleware
+from dependencies import get_current_user
+from config import settings
+from database import engine
 from exceptions import TracerException
 from schemas.error import FieldError, ValidationErrorResponse
 from routers import (
+    auth,
     graph,
     node_type,
     edge_type,
@@ -22,19 +27,27 @@ from routers import (
 )
 
 # ---------------------------------------------------------------------------
-# Database
+# Logging — configure before anything else so startup messages are captured
 # ---------------------------------------------------------------------------
 
-Base.metadata.create_all(bind=engine)
+configure_logging(settings.environment)
+
+# ---------------------------------------------------------------------------
+# Database
+# ---------------------------------------------------------------------------
+# Schema is managed by Alembic migrations.
+# Run `alembic upgrade head` to apply migrations before starting the app.
+# The create_all() call has been removed — do not add it back.
 
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
 
 app = FastAPI(
-    title="Tracer Graph API",
-    description="Property graph database API for railway programme governance.",
-    version="0.1.0",
+    title=settings.app_name,
+    description="Property Graph Database API",
+    version=settings.app_version,
+    debug=settings.debug,
 )
 
 # ---------------------------------------------------------------------------
@@ -45,16 +58,18 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Request ID and access logging
+app.add_middleware(RequestIDMiddleware)
+
 # ---------------------------------------------------------------------------
 # Exception handlers
 # ---------------------------------------------------------------------------
-
 
 @app.exception_handler(TracerException)
 async def tracer_exception_handler(request: Request, exc: TracerException):
@@ -86,7 +101,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         field_errors.append(FieldError(field=field, message=error["msg"]))
 
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=ValidationErrorResponse(errors=field_errors).model_dump(),
     )
 
@@ -107,33 +122,39 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         },
     )
 
-
 # ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
 
+# Authentication (public — no token required)
+app.include_router(auth.router)
+
 # Layer 1 — type registry
-app.include_router(node_type.router)
-app.include_router(edge_type.router)
+app.include_router(node_type.router, dependencies=[Depends(get_current_user)])
+app.include_router(edge_type.router, dependencies=[Depends(get_current_user)])
 
 # Layer 2 — schema / property definitions and assignments
-app.include_router(node_property_definition.router)
-app.include_router(edge_property_definition.router)
-app.include_router(node_type_property_assignment.router)
-app.include_router(edge_type_property_assignment.router)
+app.include_router(node_property_definition.router, dependencies=[Depends(get_current_user)])
+app.include_router(edge_property_definition.router, dependencies=[Depends(get_current_user)])
+app.include_router(node_type_property_assignment.router, dependencies=[Depends(get_current_user)])
+app.include_router(edge_type_property_assignment.router, dependencies=[Depends(get_current_user)])
 
 # Layer 3 — instance data
-app.include_router(graph.router)
-app.include_router(node.router)
-app.include_router(edge.router)
-app.include_router(node_property_value.router)
-app.include_router(edge_property_value.router)
+app.include_router(graph.router, dependencies=[Depends(get_current_user)])
+app.include_router(node.router, dependencies=[Depends(get_current_user)])
+app.include_router(edge.router, dependencies=[Depends(get_current_user)])
+app.include_router(node_property_value.router, dependencies=[Depends(get_current_user)])
+app.include_router(edge_property_value.router, dependencies=[Depends(get_current_user)])
 
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
 
-
 @app.get("/", tags=["Health"])
 def root():
-    return {"status": "ok", "api": "Tracer Graph API", "version": "0.1.0"}
+    return {
+        "status": "ok",
+        "api": settings.app_name,
+        "version": settings.app_version,
+        "environment": settings.environment,
+    }

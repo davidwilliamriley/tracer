@@ -1,19 +1,13 @@
 """
 conftest.py — shared pytest fixtures.
 
-Key design decisions:
-  - Uses an in-memory SQLite database so tests never touch graph.db
-  - Each test function gets a clean database via the `db` fixture
-  - The `client` fixture provides a FastAPI TestClient wired to the test db
-  - The `seeded_db` fixture provides a pre-populated state for tests that
-    need existing data to work with (e.g. compound endpoint tests)
-
-How pytest fixtures work:
-  - A fixture is a function decorated with @pytest.fixture
-  - When a test function declares a fixture name as a parameter,
-    pytest calls the fixture and passes its return value in automatically
-  - `yield` fixtures run setup before the yield and teardown after
-  - `scope="function"` (default) means a fresh fixture per test
+Auth changes in Phase 3:
+  - The `client` fixture now logs in after creating the TestClient and
+    sets the Authorization header on all subsequent requests.
+  - The test credentials match the defaults in config.py / .env so no
+    extra setup is needed to run the suite locally.
+  - The `auth_headers` fixture is exposed separately so individual tests
+    can use it if they need to make raw requests without the header.
 """
 import pytest
 from fastapi.testclient import TestClient
@@ -24,7 +18,6 @@ from sqlalchemy.pool import StaticPool
 from database import Base, get_db
 from main import app
 
-
 # ---------------------------------------------------------------------------
 # Test database — in-memory SQLite, isolated per test
 # ---------------------------------------------------------------------------
@@ -34,9 +27,6 @@ def db():
     """
     Provides a clean in-memory SQLite database for each test.
     All tables are created fresh, then dropped after the test completes.
-    The StaticPool ensures the same connection is reused within a test,
-    which is required for in-memory SQLite (each new connection sees an
-    empty database).
     """
     engine = create_engine(
         "sqlite:///:memory:",
@@ -44,12 +34,10 @@ def db():
         poolclass=StaticPool,
     )
     Base.metadata.create_all(bind=engine)
-
     TestingSessionLocal = sessionmaker(
         autocommit=False, autoflush=False, bind=engine
     )
     session = TestingSessionLocal()
-
     try:
         yield session
     finally:
@@ -58,28 +46,57 @@ def db():
 
 
 # ---------------------------------------------------------------------------
-# Test client — FastAPI TestClient wired to the test database
+# Test client — authenticated, wired to the test database
 # ---------------------------------------------------------------------------
 
 @pytest.fixture()
 def client(db):
     """
-    Provides a FastAPI TestClient that uses the test database.
+    Provides an authenticated FastAPI TestClient.
 
-    The key trick here is overriding the `get_db` dependency — FastAPI's
-    dependency injection system lets us swap out `get_db` at test time
-    so that every request uses our isolated test database instead of graph.db.
+    Two things happen here:
+      1. The get_db dependency is overridden to use the in-memory test DB.
+      2. After the client is created, we log in with the dev credentials
+         and set the Authorization header so all subsequent requests
+         automatically include the token.
     """
     def override_get_db():
         try:
             yield db
         finally:
-            pass  # session lifecycle is managed by the `db` fixture
+            pass
 
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
+
+    with TestClient(app, raise_server_exceptions=False) as test_client:
+        # Log in and attach the token to all future requests
+        response = test_client.post(
+            "/auth/token",
+            data={"username": "admin", "password": "tracer-dev-password"},
+        )
+        assert response.status_code == 200, (
+            f"Test login failed: {response.status_code} {response.text}"
+        )
+        token = response.json()["access_token"]
+        test_client.headers["Authorization"] = f"Bearer {token}"
         yield test_client
+
     app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# Auth headers fixture — for tests that need explicit header control
+# ---------------------------------------------------------------------------
+
+@pytest.fixture()
+def auth_headers(client):
+    """
+    Returns the Authorization header dict for use in raw requests.
+    Usually you won't need this — `client` already has the header set.
+    Useful when testing auth failure scenarios where you want to
+    make a request WITHOUT the header.
+    """
+    return {"Authorization": client.headers["Authorization"]}
 
 
 # ---------------------------------------------------------------------------
@@ -89,17 +106,9 @@ def client(db):
 @pytest.fixture()
 def seeded(client):
     """
-    Creates a minimal but complete graph in the test database:
-      - 1 NodeType (HAZARD) with 2 property definitions assigned
-      - 1 EdgeType (CAUSES)
-      - 2 Nodes (HAZ-001, HAZ-002)
-      - 1 Edge (CAUSES-001) connecting them
-      - Property values set on HAZ-001
-
+    Creates a minimal but complete graph in the test database.
     Returns a dict of IDs so tests can reference created objects.
-    Depends on `client` so it uses the same isolated test database.
     """
-    # NodeType
     nt = client.post("/node-types/", json={
         "node_type_identifier": "HAZARD",
         "node_type_name": "Hazard",
@@ -107,14 +116,12 @@ def seeded(client):
         "created_by": "test",
     }).json()
 
-    # EdgeType
     et = client.post("/edge-types/", json={
         "edge_type_identifier": "CAUSES",
         "edge_type_name": "Causes",
         "created_by": "test",
     }).json()
 
-    # Property definitions
     p_id = client.post("/node-property-definitions/", json={
         "node_property_definition_identifier": "HAZ_ID",
         "node_property_definition_name": "Hazard ID",
@@ -130,7 +137,6 @@ def seeded(client):
         "created_by": "test",
     }).json()
 
-    # Assign properties to NodeType
     client.post("/node-type-property-assignments/", json={
         "node_type_id_fk": nt["id"],
         "node_property_definition_id_fk": p_id["id"],
@@ -143,11 +149,10 @@ def seeded(client):
         "node_property_definition_id_fk": p_severity["id"],
         "is_required": False,
         "sort_order": 2,
-        "default_value": "High",  # overrides definition default
+        "default_value": "High",
         "created_by": "test",
     })
 
-    # Nodes
     n1 = client.post("/nodes/", json={
         "node_type_id_fk": nt["id"],
         "node_identifier": "HAZ-001",
@@ -162,7 +167,6 @@ def seeded(client):
         "created_by": "test",
     }).json()
 
-    # Edge
     e1 = client.post("/edges/", json={
         "edge_type_id_fk": et["id"],
         "edge_identifier": "CAUSES-001",
@@ -172,7 +176,6 @@ def seeded(client):
         "created_by": "test",
     }).json()
 
-    # Property values on n1
     client.post("/node-property-values/", json={
         "node_id_fk": n1["id"],
         "node_property_definition_id_fk": p_id["id"],
