@@ -2,6 +2,7 @@
 .venv/
 venv/
 
+Tracer.code-workspace
 *.db
 *.db-shm
 *.db-wal
