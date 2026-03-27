@@ -1,79 +1,169 @@
 /**
- * GraphCanvas.jsx — the main React Flow canvas.
- *
- * React concepts introduced here:
- *   - useCallback: memoises functions so React doesn't recreate them
- *     on every render — important for React Flow event handlers
- *   - useMemo: memoises computed values — we use it to build the
- *     nodeTypes object once rather than on every render
- *   - Props: data passed down from the parent (Canvas page)
- *
- * React Flow concepts:
- *   - nodes and edges are arrays of objects with specific shapes
- *   - onNodeClick fires when the user clicks a node
- *   - nodeTypes maps a type string to a custom component
- *   - Controls adds zoom buttons, MiniMap adds the overview
- *   - Background adds the dot grid
+ * GraphCanvas.jsx — Cytoscape.js canvas.
+ * Rectangular nodes with identifier + name, colour-coded by type.
+ * Connections-first panel and top toolbar handled by Canvas.jsx / NodePanel.jsx.
  */
-import { useCallback, useMemo } from 'react'
-import {
-  ReactFlow,
-  Controls,
-  MiniMap,
-  Background,
-  BackgroundVariant,
-  useNodesState,
-  useEdgesState,
-} from '@xyflow/react'
-import TypedNode from './nodes/TypedNode'
+import { useEffect, useRef } from 'react'
+import cytoscape from 'cytoscape'
+import cytoscapeDagre from 'cytoscape-dagre'
+import { getLayoutOptions, colourForType } from '../utils/layout'
 
-// Register custom node types — this object must be defined outside the
-// component or memoised, otherwise React Flow re-registers on every render
-const nodeTypes = { typedNode: TypedNode }
+cytoscape.use(cytoscapeDagre)
 
-export default function GraphCanvas({ nodes: initialNodes, edges: initialEdges, onNodeClick }) {
-  // useNodesState and useEdgesState are React Flow hooks that manage
-  // nodes and edges with built-in change handlers for drag, select, etc.
-  const [nodes, , onNodesChange] = useNodesState(initialNodes)
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges)
+function buildStylesheet() {
+  return [
+    {
+      selector: 'node',
+      style: {
+        'shape': 'roundrectangle',
+        'width': 180,
+        'height': 52,
+        'background-color': (ele) => colourForType(ele.data('typeIdentifier')).bg,
+        'border-color':     (ele) => colourForType(ele.data('typeIdentifier')).border,
+        'border-width': 1.5,
+        'label': (ele) => `${ele.data('identifier')}\n${ele.data('label')}`,
+        'text-valign': 'center',
+        'text-halign': 'center',
+        'text-wrap': 'wrap',
+        'text-max-width': 168,
+        'font-size': 10,
+        'font-family': 'system-ui, sans-serif',
+        'color': (ele) => colourForType(ele.data('typeIdentifier')).text,
+        'line-height': 1.4,
+        'padding': 6,
+      },
+    },
+    {
+      selector: 'node:selected',
+      style: {
+        'border-width': 3,
+        'border-color': '#2563EB',
+      },
+    },
+    {
+      selector: 'node.highlighted',
+      style: {
+        'border-width': 2.5,
+        'border-color': '#2563EB',
+        'z-index': 10,
+      },
+    },
+    {
+      selector: 'node.dimmed',
+      style: { 'opacity': 0.2 },
+    },
+    {
+      selector: 'edge',
+      style: {
+        'width': 1.5,
+        'line-color': '#CBD5E1',
+        'target-arrow-color': '#CBD5E1',
+        'target-arrow-shape': 'triangle',
+        'curve-style': 'bezier',
+        'label': 'data(typeLabel)',
+        'font-size': 8,
+        'font-family': 'system-ui, sans-serif',
+        'color': '#9CA3AF',
+        'text-background-color': '#FFFFFF',
+        'text-background-opacity': 0.85,
+        'text-background-padding': 2,
+        'text-rotation': 'autorotate',
+        'source-distance-from-node': 4,
+        'target-distance-from-node': 4,
+      },
+    },
+    {
+      selector: 'edge.dimmed',
+      style: { 'opacity': 0.1 },
+    },
+    {
+      selector: 'edge.highlighted',
+      style: {
+        'line-color': '#3B82F6',
+        'target-arrow-color': '#3B82F6',
+        'width': 2.5,
+      },
+    },
+  ]
+}
 
-  const handleNodeClick = useCallback((event, node) => {
-    onNodeClick?.(node)
-  }, [onNodeClick])
+export default function GraphCanvas({ elements, layout, onNodeClick, selectedId }) {
+  const containerRef = useRef(null)
+  const cyRef = useRef(null)
 
-  return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onNodeClick={handleNodeClick}
-      nodeTypes={nodeTypes}
-      fitView                          // auto-zoom to fit all nodes on load
-      fitViewOptions={{ padding: 0.1 }}
-      minZoom={0.1}
-      maxZoom={2}
-      defaultEdgeOptions={{
-        style: { stroke: '#94a3b8', strokeWidth: 1.5 },
-        animated: false,
-      }}
-    >
-      <Controls className="!shadow-none !border !border-gray-200 !rounded-lg" />
-      <MiniMap
-        nodeColor={(node) => {
-          const type = node.data?.typeIdentifier?.toUpperCase()
-          const colours = {
-            HAZARD: '#fca5a5',
-            SAFETY_REQUIREMENT: '#93c5fd',
-            REQUIREMENT: '#93c5fd',
-            CONTROL: '#86efac',
-            EVIDENCE: '#c4b5fd',
-          }
-          return colours[type] || '#d1d5db'
-        }}
-        className="!border !border-gray-200 !rounded-lg !shadow-none"
-      />
-      <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
-    </ReactFlow>
-  )
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    const cy = cytoscape({
+      container: containerRef.current,
+      elements: elements || [],
+      style: buildStylesheet(),
+      layout: getLayoutOptions(layout || 'cose'),
+      wheelSensitivity: 0.3,
+      minZoom: 0.05,
+      maxZoom: 4,
+      boxSelectionEnabled: false,
+    })
+
+    cy.on('tap', 'node', (evt) => {
+      onNodeClick?.(evt.target.data())
+    })
+
+    cy.on('tap', (evt) => {
+      if (evt.target === cy) {
+        cy.elements().removeClass('highlighted dimmed')
+        onNodeClick?.(null)
+      }
+    })
+
+    cy.on('mouseover', 'node', (evt) => {
+      const neighbourhood = evt.target.closedNeighborhood()
+      cy.elements().not(neighbourhood).addClass('dimmed')
+      neighbourhood.addClass('highlighted')
+    })
+
+    cy.on('mouseout', 'node', () => {
+      cy.elements().removeClass('highlighted dimmed')
+    })
+
+    cyRef.current = cy
+    return () => { cy.destroy(); cyRef.current = null }
+  }, [])
+
+  useEffect(() => {
+    const cy = cyRef.current
+    if (!cy || !elements) return
+    cy.elements().remove()
+    cy.add(elements)
+    const l = cy.layout(getLayoutOptions(layout || 'cose'))
+    l.on('layoutstop', () => cy.fit(undefined, 60))
+    l.run()
+  }, [elements])
+
+  useEffect(() => {
+    const cy = cyRef.current
+    if (!cy) return
+    const l = cy.layout(getLayoutOptions(layout || 'cose'))
+    l.on('layoutstop', () => cy.fit(undefined, 60))
+    l.run()
+  }, [layout])
+
+  useEffect(() => {
+    const cy = cyRef.current
+    if (!cy) return
+    cy.elements().removeClass('highlighted dimmed')
+    if (selectedId) {
+      const node = cy.getElementById(selectedId)
+      if (node.length) {
+        const neighbourhood = node.closedNeighborhood()
+        cy.elements().not(neighbourhood).addClass('dimmed')
+        neighbourhood.addClass('highlighted')
+        node.select()
+      }
+    } else {
+      cy.elements().unselect()
+    }
+  }, [selectedId])
+
+  return <div ref={containerRef} className="cy-container" />
 }

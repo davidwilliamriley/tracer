@@ -117,13 +117,16 @@ export default function SchemaEditor() {
       .finally(() => setIsLoading(false))
   }, [selectedType, entityType])
 
-  // Definitions not yet assigned to this type
+  // Definitions not yet assigned to this type.
+  // Both sides normalised to strings — the API returns FK values and
+  // definition IDs as UUID strings, but comparison can fail silently if
+  // one side is a UUID object and the other is a plain string.
   const assignedDefIds = new Set(
     assignments.map((a) =>
-      a.node_property_definition_id_fk ?? a.edge_property_definition_id_fk
+      String(a.node_property_definition_id_fk ?? a.edge_property_definition_id_fk)
     )
   )
-  const availableDefs = allDefs.filter((d) => !assignedDefIds.has(d.id))
+  const availableDefs = allDefs.filter((d) => !assignedDefIds.has(String(d.id)))
 
   const reloadAssignments = () => {
     if (!selectedType) return

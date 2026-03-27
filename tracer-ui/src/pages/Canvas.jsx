@@ -1,144 +1,147 @@
 /**
- * Canvas.jsx — graph canvas page (Phase 4B version).
- *
- * The toolbar and logout moved to the Sidebar in Phase 4B.
- * This page is now just the canvas + node panel.
+ * Canvas.jsx — main graph canvas page.
+ * Toolbar at top, Cytoscape canvas filling remaining height,
+ * NodePanel slides in from the right on node click.
  */
 import { useState, useEffect, useCallback } from 'react'
-import { ReactFlowProvider } from '@xyflow/react'
 import { getGraph } from '../api/graph'
-import { applyDagreLayout } from '../utils/layout'
 import GraphCanvas from '../components/GraphCanvas'
 import NodePanel from '../components/NodePanel'
 
-function buildFlowGraph(apiGraph) {
+const LAYOUTS = [
+  { key: 'cose',         label: '⊛ Force' },
+  { key: 'dagre',        label: '↕ TB'    },
+  { key: 'dagre-lr',     label: '↔ LR'    },
+  { key: 'breadthfirst', label: '⊞ BFS'   },
+]
+
+function buildElements(apiGraph) {
   const nodes = apiGraph.nodes.map((n) => ({
-    id: n.id,
-    type: 'typedNode',
+    group: 'nodes',
     data: {
-      label: n.name,
-      identifier: n.identifier,
+      id:             n.id,
+      label:          n.name,
+      identifier:     n.identifier,
       typeIdentifier: n.type_identifier,
-      typeName: n.type_name,
+      typeName:       n.type_name,
     },
-    position: { x: 0, y: 0 },
   }))
-
   const edges = apiGraph.edges.map((e) => ({
-    id: e.id,
-    source: e.source,
-    target: e.target,
-    label: e.type_identifier,
-    labelStyle: { fontSize: 10, fill: '#94a3b8' },
-    labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
+    group: 'edges',
+    data: {
+      id:             e.id,
+      source:         e.source,
+      target:         e.target,
+      typeLabel:      e.type_identifier,
+      typeIdentifier: e.type_identifier,
+    },
   }))
-
-  return { nodes, edges }
+  return [...nodes, ...edges]
 }
 
 export default function Canvas() {
-  const [nodes, setNodes] = useState([])
-  const [edges, setEdges] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [selectedNodeId, setSelectedNodeId] = useState(null)
-  const [layoutDirection, setLayoutDirection] = useState('TB')
-  const [nodeCount, setNodeCount] = useState(0)
-  const [edgeCount, setEdgeCount] = useState(0)
+  const [elements, setElements]     = useState([])
+  const [isLoading, setIsLoading]   = useState(true)
+  const [error, setError]           = useState(null)
+  const [layout, setLayout]         = useState('cose')
+  const [selectedNodeId, setSelected] = useState(null)
+  const [counts, setCounts]         = useState({ nodes: 0, edges: 0 })
 
-  const fetchGraph = useCallback(async (direction = layoutDirection) => {
-    setIsLoading(true)
-    setError(null)
+  const fetchGraph = useCallback(async () => {
+    setIsLoading(true); setError(null)
     try {
-      const apiGraph = await getGraph()
-      setNodeCount(apiGraph.node_count)
-      setEdgeCount(apiGraph.edge_count)
-      const { nodes: rawNodes, edges: rawEdges } = buildFlowGraph(apiGraph)
-      const { nodes: positioned, edges: laid } = applyDagreLayout(rawNodes, rawEdges, direction)
-      setNodes(positioned)
-      setEdges(laid)
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load graph')
+      const data = await getGraph()
+      setCounts({ nodes: data.node_count, edges: data.edge_count })
+      setElements(buildElements(data))
+    } catch (e) {
+      setError(e.response?.data?.message || 'Failed to load graph')
     } finally {
       setIsLoading(false)
     }
-  }, [layoutDirection])
+  }, [])
 
   useEffect(() => { fetchGraph() }, [])
 
-  const handleNodeClick = useCallback((node) => setSelectedNodeId(node.id), [])
-  const handleClosePanel = useCallback(() => setSelectedNodeId(null), [])
-
-  const handleLayoutChange = (dir) => {
-    setLayoutDirection(dir)
-    fetchGraph(dir)
-  }
+  const handleNodeClick = useCallback((nodeData) => {
+    setSelected(nodeData?.id || null)
+  }, [])
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
 
-      {/* Canvas toolbar */}
-      <div className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4 shrink-0">
-        <span className="text-xs text-gray-400">
-          {isLoading ? 'Loading…' : `${nodeCount} nodes · ${edgeCount} edges`}
+      {/* ── Top toolbar ── */}
+      <div className="h-12 bg-white border-b border-gray-200 flex items-center gap-3 px-4 shrink-0 z-10">
+        <span className="text-xs text-gray-400 mr-auto">
+          {isLoading ? 'Loading…' : `${counts.nodes} nodes · ${counts.edges} edges`}
         </span>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
-            {['TB', 'LR'].map((dir) => (
-              <button
-                key={dir}
-                onClick={() => handleLayoutChange(dir)}
-                className={`px-2.5 py-1 transition-colors ${
-                  layoutDirection === dir
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-600 hover:bg-gray-50 border-l border-gray-200 first:border-0'
-                }`}
-              >
-                {dir === 'TB' ? '↕ TB' : '↔ LR'}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => fetchGraph()}
-            disabled={isLoading}
-            className="px-3 py-1 text-xs border border-gray-200 rounded-lg text-gray-600
-                       hover:bg-gray-50 disabled:opacity-50 transition-colors"
-          >
-            Refresh
-          </button>
+
+        {/* Layout picker */}
+        <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+          {LAYOUTS.map((l, i) => (
+            <button key={l.key} onClick={() => setLayout(l.key)}
+              className={`px-2.5 py-1.5 transition-colors ${i > 0 ? 'border-l border-gray-200' : ''} ${
+                layout === l.key
+                  ? 'bg-gray-900 text-white'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}>
+              {l.label}
+            </button>
+          ))}
         </div>
+
+        <button onClick={fetchGraph} disabled={isLoading}
+          className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-600
+                     hover:bg-gray-50 disabled:opacity-50 transition-colors">
+          Refresh
+        </button>
       </div>
 
-      {/* Canvas */}
-      <div className="flex-1 relative overflow-hidden">
-        {error && (
-          <div className="absolute inset-0 flex items-center justify-center z-10">
-            <div className="bg-white border border-red-200 rounded-xl p-6 max-w-sm text-center shadow-sm">
-              <p className="text-sm text-red-600 mb-3">{error}</p>
-              <button onClick={() => fetchGraph()} className="text-sm text-blue-600 hover:underline">
-                Try again
-              </button>
-            </div>
-          </div>
-        )}
+      {/* ── Canvas + panel ── */}
+      <div className="flex flex-1 overflow-hidden">
+        <div className="flex-1 relative overflow-hidden">
 
-        {!isLoading && !error && nodes.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center z-10">
-            <div className="text-center">
-              <p className="text-sm text-gray-500 mb-1">No nodes yet</p>
-              <p className="text-xs text-gray-400">Add NodeTypes and Nodes via the Admin section</p>
+          {/* Error */}
+          {error && (
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              <div className="bg-white border border-red-200 rounded-xl p-6 text-center shadow-sm max-w-sm">
+                <p className="text-sm text-red-600 mb-3">{error}</p>
+                <button onClick={fetchGraph} className="text-sm text-blue-600 hover:underline">
+                  Try again
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <ReactFlowProvider>
-          {nodes.length > 0 && (
-            <GraphCanvas nodes={nodes} edges={edges} onNodeClick={handleNodeClick} />
+          {/* Empty state */}
+          {!isLoading && !error && elements.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              <div className="text-center">
+                <p className="text-sm text-gray-500 mb-1">No nodes yet</p>
+                <p className="text-xs text-gray-400">
+                  Run seed_data.py or add nodes via the Admin tab
+                </p>
+              </div>
+            </div>
           )}
-          {selectedNodeId && (
-            <NodePanel nodeId={selectedNodeId} onClose={handleClosePanel} />
+
+          {/* Canvas */}
+          {elements.length > 0 && (
+            <GraphCanvas
+              elements={elements}
+              layout={layout}
+              onNodeClick={handleNodeClick}
+              selectedId={selectedNodeId}
+            />
           )}
-        </ReactFlowProvider>
+        </div>
+
+        {/* Slide-in detail panel */}
+        {selectedNodeId && (
+          <NodePanel
+            nodeId={selectedNodeId}
+            onClose={() => setSelected(null)}
+          />
+        )}
       </div>
     </div>
   )

@@ -12,6 +12,7 @@ import DataTable from '../../components/admin/DataTable'
 import Modal from '../../components/admin/Modal'
 import ConfirmDialog from '../../components/admin/ConfirmDialog'
 import FormField, { TextInput, TextArea } from '../../components/admin/FormField'
+import PageHeader from '../../components/admin/PageHeader'
 import {
   getNodeTypes,
   createNodeType,
@@ -146,21 +147,16 @@ export default function NodeTypes() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Page header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
-        <div>
-          <h1 className="text-base font-semibold text-gray-900">Node types</h1>
-          <p className="text-xs text-gray-400 mt-0.5">
-            Define the types of nodes that can exist in your graph
-          </p>
-        </div>
-        <button
-          onClick={() => { setCreateOpen(true); setFormError(null) }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium
-                     hover:bg-blue-700 transition-colors"
-        >
-          + New node type
-        </button>
-      </div>
+      <PageHeader
+        title="Node types"
+        description="Define the types of nodes that can exist in your graph"
+        action={
+          <button onClick={() => { setCreateOpen(true); setFormError(null) }}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+            + New node type
+          </button>
+        }
+      />
 
       {/* Table */}
       <div className="flex-1 overflow-auto bg-white">

@@ -6,6 +6,7 @@ import DataTable from '../../components/admin/DataTable'
 import Modal from '../../components/admin/Modal'
 import ConfirmDialog from '../../components/admin/ConfirmDialog'
 import FormField, { TextInput, TextArea } from '../../components/admin/FormField'
+import PageHeader from '../../components/admin/PageHeader'
 import {
   getEdgeTypes,
   createEdgeType,
@@ -102,16 +103,16 @@ export default function EdgeTypes() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
-        <div>
-          <h1 className="text-base font-semibold text-gray-900">Edge types</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Define the types of relationships between nodes</p>
-        </div>
-        <button onClick={() => { setCreateOpen(true); setFormError(null) }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-          + New edge type
-        </button>
-      </div>
+      <PageHeader
+        title="Edge types"
+        description="Define the types of relationships between nodes"
+        action={
+          <button onClick={() => { setCreateOpen(true); setFormError(null) }}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+            + New edge type
+          </button>
+        }
+      />
 
       <div className="flex-1 overflow-auto bg-white">
         <DataTable

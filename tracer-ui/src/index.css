@@ -1,4 +1,7 @@
 @import "tailwindcss";
 
-/* React Flow requires these base styles */
-@import "@xyflow/react/dist/style.css";
+/* Cytoscape container must have explicit dimensions */
+.cy-container {
+  width: 100%;
+  height: 100%;
+}
