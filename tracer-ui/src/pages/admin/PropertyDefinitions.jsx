@@ -1,12 +1,9 @@
-/**
- * PropertyDefinitions.jsx — manage node and edge property definitions.
- * Two tabs: one for node properties, one for edge properties.
- */
 import { useState, useEffect } from 'react'
 import DataTable from '../../components/admin/DataTable'
 import Modal from '../../components/admin/Modal'
 import ConfirmDialog from '../../components/admin/ConfirmDialog'
 import FormField, { TextInput, TextArea, SelectInput } from '../../components/admin/FormField'
+import { Button } from '@/components/ui/button'
 import {
   getNodePropertyDefinitions,
   createNodePropertyDefinition,
@@ -31,12 +28,12 @@ const COLUMNS = (prefix) => [
   { key: `${prefix}_name`,       label: 'Name' },
   { key: `${prefix}_type`,       label: 'Type',
     render: (row) => (
-      <span className="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 border border-gray-200">
+      <span className="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground border border-border">
         {row[`${prefix}_type`]}
       </span>
     )},
   { key: `${prefix}_default_value`, label: 'Default',
-    render: (row) => row[`${prefix}_default_value`] || <span className="text-gray-300">—</span> },
+    render: (row) => row[`${prefix}_default_value`] || <span className="text-muted-foreground">—</span> },
 ]
 
 function PropDefForm({ prefix, initial, onSubmit, isLoading, error }) {
@@ -75,12 +72,11 @@ function PropDefForm({ prefix, initial, onSubmit, isLoading, error }) {
         <TextInput value={defaultValue} onChange={setDefaultValue} placeholder={type === 'boolean' ? 'true or false' : ''} />
       </FormField>
       {error && (
-        <div className="mb-4 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>
+        <div className="mb-4 text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2">{error}</div>
       )}
-      <button type="submit" disabled={isLoading}
-        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors">
+      <Button type="submit" disabled={isLoading} className="w-full">
         {isLoading ? 'Saving…' : initial ? 'Save changes' : 'Create definition'}
-      </button>
+      </Button>
     </form>
   )
 }
@@ -128,20 +124,19 @@ function PropDefTab({ prefix, getFn, createFn, updateFn, deleteFn, label }) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex justify-end px-6 py-3 border-b border-gray-100 shrink-0">
-        <button onClick={() => { setCreateOpen(true); setFormError(null) }}
-          className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+      <div className="flex justify-end px-6 py-3 border-b border-border shrink-0">
+        <Button size="sm" onClick={() => { setCreateOpen(true); setFormError(null) }}>
           + New definition
-        </button>
+        </Button>
       </div>
-      <div className="flex-1 overflow-auto bg-white">
+      <div className="flex-1 overflow-auto bg-card">
         <DataTable
           columns={COLUMNS(prefix)} rows={rows} isLoading={isLoading} error={loadError}
           emptyMessage={`No ${label} property definitions yet`}
           actions={(row) => (
             <div className="flex gap-2 justify-end">
-              <button onClick={() => { setEditTarget(row); setFormError(null) }} className="text-xs text-blue-600 hover:underline">Edit</button>
-              <button onClick={() => setDeleteTarget(row)} className="text-xs text-red-500 hover:underline">Delete</button>
+              <Button variant="ghost" size="xs" onClick={() => { setEditTarget(row); setFormError(null) }}>Edit</Button>
+              <Button variant="ghost" size="xs" className="text-destructive hover:text-destructive" onClick={() => setDeleteTarget(row)}>Delete</Button>
             </div>
           )}
         />
@@ -158,15 +153,19 @@ export default function PropertyDefinitions() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="bg-white border-b border-gray-200 px-6 py-4 shrink-0">
-        <h1 className="text-base font-semibold text-gray-900">Property definitions</h1>
-        <p className="text-xs text-gray-400 mt-0.5">Define reusable property fields that can be assigned to node and edge types</p>
+      <div className="bg-card border-b border-border px-6 py-4 shrink-0">
+        <h1 className="text-base font-semibold text-foreground">Property definitions</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">Define reusable property fields that can be assigned to node and edge types</p>
         <div className="flex gap-1 mt-4">
           {[['node', 'Node properties'], ['edge', 'Edge properties']].map(([key, label]) => (
-            <button key={key} onClick={() => setTab(key)}
-              className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${tab === key ? 'bg-gray-900 text-white border-gray-900' : 'text-gray-600 border-gray-200 hover:border-gray-300'}`}>
+            <Button
+              key={key}
+              size="xs"
+              variant={tab === key ? 'default' : 'outline'}
+              onClick={() => setTab(key)}
+            >
               {label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

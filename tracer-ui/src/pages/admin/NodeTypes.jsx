@@ -1,18 +1,10 @@
-/**
- * NodeTypes.jsx — admin page for managing NodeTypes.
- *
- * Pattern used across all admin list pages:
- *   1. Fetch list on mount with useEffect
- *   2. Local state controls which modal is open (create / edit / delete)
- *   3. After any mutation (create/edit/delete), re-fetch the list
- *   4. Errors from the API are shown inline in the modal or table
- */
 import { useState, useEffect } from 'react'
 import DataTable from '../../components/admin/DataTable'
 import Modal from '../../components/admin/Modal'
 import ConfirmDialog from '../../components/admin/ConfirmDialog'
 import FormField, { TextInput, TextArea } from '../../components/admin/FormField'
 import PageHeader from '../../components/admin/PageHeader'
+import { Button } from '@/components/ui/button'
 import {
   getNodeTypes,
   createNodeType,
@@ -24,7 +16,7 @@ const COLUMNS = [
   { key: 'node_type_identifier', label: 'Identifier' },
   { key: 'node_type_name',       label: 'Name' },
   { key: 'node_type_description', label: 'Description',
-    render: (row) => row.node_type_description || <span className="text-gray-300">—</span> },
+    render: (row) => row.node_type_description || <span className="text-muted-foreground">—</span> },
   { key: 'created_on', label: 'Created',
     render: (row) => row.created_on?.slice(0, 10) },
 ]
@@ -47,7 +39,7 @@ function NodeTypeForm({ initial, onSubmit, isLoading, error }) {
           onChange={setIdentifier}
           placeholder="SAFETY_REQUIREMENT"
           required
-          disabled={!!initial}  // identifier is immutable after creation
+          disabled={!!initial}
         />
       </FormField>
       <FormField label="Name" required>
@@ -58,19 +50,14 @@ function NodeTypeForm({ initial, onSubmit, isLoading, error }) {
       </FormField>
 
       {error && (
-        <div className="mb-4 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+        <div className="mb-4 text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2">
           {error}
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium
-                   hover:bg-blue-700 disabled:opacity-50 transition-colors"
-      >
+      <Button type="submit" disabled={isLoading} className="w-full">
         {isLoading ? 'Saving…' : initial ? 'Save changes' : 'Create node type'}
-      </button>
+      </Button>
     </form>
   )
 }
@@ -146,20 +133,17 @@ export default function NodeTypes() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Page header */}
       <PageHeader
         title="Node types"
         description="Define the types of nodes that can exist in your graph"
         action={
-          <button onClick={() => { setCreateOpen(true); setFormError(null) }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+          <Button size="sm" onClick={() => { setCreateOpen(true); setFormError(null) }}>
             + New node type
-          </button>
+          </Button>
         }
       />
 
-      {/* Table */}
-      <div className="flex-1 overflow-auto bg-white">
+      <div className="flex-1 overflow-auto bg-card">
         <DataTable
           columns={COLUMNS}
           rows={rows}
@@ -168,38 +152,29 @@ export default function NodeTypes() {
           emptyMessage="No node types yet — create your first one"
           actions={(row) => (
             <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => { setEditTarget(row); setFormError(null) }}
-                className="text-xs text-blue-600 hover:underline"
-              >
+              <Button variant="ghost" size="xs" onClick={() => { setEditTarget(row); setFormError(null) }}>
                 Edit
-              </button>
-              <button
-                onClick={() => setDeleteTarget(row)}
-                className="text-xs text-red-500 hover:underline"
-              >
+              </Button>
+              <Button variant="ghost" size="xs" className="text-destructive hover:text-destructive" onClick={() => setDeleteTarget(row)}>
                 Delete
-              </button>
+              </Button>
             </div>
           )}
         />
       </div>
 
-      {/* Create modal */}
       {createOpen && (
         <Modal title="New node type" onClose={() => setCreateOpen(false)}>
           <NodeTypeForm onSubmit={handleCreate} isLoading={formLoading} error={formError} />
         </Modal>
       )}
 
-      {/* Edit modal */}
       {editTarget && (
         <Modal title="Edit node type" onClose={() => setEditTarget(null)}>
           <NodeTypeForm initial={editTarget} onSubmit={handleEdit} isLoading={formLoading} error={formError} />
         </Modal>
       )}
 
-      {/* Delete confirmation */}
       {deleteTarget && (
         <ConfirmDialog
           title="Delete node type"
