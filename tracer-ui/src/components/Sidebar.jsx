@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuthStore } from '../store/authStore'
+import { Button } from '@/components/ui/button'
 
 const GRAPH_LINKS = [
   { to: '/', label: 'Graph canvas', icon: '⬡', end: true },
@@ -18,8 +19,8 @@ const ADMIN_LINKS = [
 const linkClass = ({ isActive }) =>
   `flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors mb-0.5 ${
     isActive
-      ? 'bg-gray-900 text-white'
-      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+      ? 'bg-primary text-primary-foreground'
+      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
   }`
 
 export default function Sidebar() {
@@ -29,20 +30,20 @@ export default function Sidebar() {
   const [tab, setTab] = useState(isAdmin ? 'admin' : 'graph')
 
   return (
-    <aside className="w-52 bg-white border-r border-gray-200 flex flex-col shrink-0 h-full">
+    <aside className="w-52 bg-card border-r border-border flex flex-col shrink-0 h-full">
       {/* Logo */}
-      <div className="h-12 flex items-center px-4 border-b border-gray-200 shrink-0">
-        <span className="text-sm font-semibold text-gray-900">Tracer</span>
+      <div className="h-12 flex items-center px-4 border-b border-border shrink-0">
+        <span className="text-sm font-semibold text-foreground">Tracer</span>
       </div>
 
       {/* Tab switcher */}
-      <div className="flex border-b border-gray-200 shrink-0">
+      <div className="flex border-b border-border shrink-0">
         {[['graph', 'Graph'], ['admin', 'Admin']].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)}
             className={`flex-1 py-2 text-xs font-medium transition-colors ${
               tab === key
-                ? 'border-b-2 border-gray-900 text-gray-900'
-                : 'text-gray-400 hover:text-gray-600'
+                ? 'border-b-2 border-primary text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
             }`}>
             {label}
           </button>
@@ -60,12 +61,11 @@ export default function Sidebar() {
       </nav>
 
       {/* User */}
-      <div className="px-4 py-3 border-t border-gray-200 shrink-0">
-        <div className="text-xs text-gray-500 mb-1">{user?.username}</div>
-        <button onClick={logoutAction}
-          className="text-xs text-gray-400 hover:text-gray-700 transition-colors">
+      <div className="px-4 py-3 border-t border-border shrink-0">
+        <div className="text-xs text-muted-foreground mb-1">{user?.username}</div>
+        <Button variant="ghost" size="xs" onClick={logoutAction} className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground">
           Sign out
-        </button>
+        </Button>
       </div>
     </aside>
   )
