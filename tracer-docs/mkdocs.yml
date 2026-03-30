@@ -1,0 +1,136 @@
+site_name: Tracer
+site_description: Property graph database for systems safety governance in the built environment
+site_author: David
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  custom_dir: docs/overrides
+  font:
+    text: IBM Plex Sans
+    code: IBM Plex Mono
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+    logo: material/graph-outline
+
+extra_css:
+  - assets/stylesheets/tracer.css
+
+plugins:
+  - search
+  - tags
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+
+  - Overview:
+    - What is Tracer: overview/what-is-tracer.md
+    - Key Concepts: overview/key-concepts.md
+    - System Architecture: overview/architecture.md
+
+  - Domain Model:
+    - Introduction: domain-model/index.md
+    - Description Layer — Uniclass: domain-model/uniclass.md
+    - Analysis Layer — STPA: domain-model/stpa.md
+    - Argument Layer — GSN: domain-model/gsn.md
+    - Edge Types: domain-model/edge-types.md
+    - Lifecycle States: domain-model/lifecycle-states.md
+
+  - Installation:
+    - Requirements: installation/requirements.md
+    - Backend Setup: installation/backend-setup.md
+    - Frontend Setup: installation/frontend-setup.md
+    - Configuration: installation/configuration.md
+
+  - User Guide:
+    - Navigation: user-guide/navigation.md
+    - Graph Canvas: user-guide/graph-canvas.md
+    - Adding Nodes: user-guide/adding-nodes.md
+    - Adding Edges: user-guide/adding-edges.md
+    - Schema Editor: user-guide/schema-editor.md
+    - Querying the Graph: user-guide/querying.md
+
+  - Schema Configuration:
+    - Overview: schema-configuration/index.md
+    - Node Types: schema-configuration/node-types.md
+    - Property Definitions: schema-configuration/property-definitions.md
+    - Edge Types: schema-configuration/edge-types.md
+    - Seed Data: schema-configuration/seed-data.md
+
+  - API Reference:
+    - Overview: api-reference/index.md
+    - Authentication: api-reference/authentication.md
+    - Nodes: api-reference/nodes.md
+    - Edges: api-reference/edges.md
+    - Graph Traversal: api-reference/graph.md
+    - Admin: api-reference/admin.md
+
+  - Developer Guide:
+    - Codebase Structure: developer-guide/codebase-structure.md
+    - Backend Architecture: developer-guide/backend-architecture.md
+    - Frontend Architecture: developer-guide/frontend-architecture.md
+    - Database Schema: developer-guide/database-schema.md
+    - Adding Endpoints: developer-guide/adding-endpoints.md
+    - Migrations: developer-guide/migrations.md
+    - PostgreSQL Migration: developer-guide/postgres-migration.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com
+  version:
+    provider: mike
+  status:
+    new: Recently added
+    deprecated: Deprecated
+
+copyright: Copyright &copy; 2026 Tracer — Built Environment Safety Governance
