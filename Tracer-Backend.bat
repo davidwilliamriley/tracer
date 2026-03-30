@@ -6,7 +6,7 @@ set SERVER_PORT=8000
 set DOCS_URL=http://%SERVER_HOST%:%SERVER_PORT%/docs
 
 REM Run from the API folder so module imports resolve correctly
-cd /d "%~dp0graph_api"
+cd /d "%~dp0graph-api"
 
 echo.
 echo API docs:

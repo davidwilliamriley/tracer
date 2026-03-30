@@ -1,0 +1,5 @@
+mkdocs>=1.6
+mkdocs-material>=9.5
+pymdown-extensions>=10.8
+mkdocs-tags-plugin>=0.8
+mike>=2.1
