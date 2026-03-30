@@ -12,12 +12,12 @@ echo   UI:   http://localhost:%UI_PORT%
 echo.
 
 REM Launch backend in a new window
-start "Tracer Backend" cmd /k ""%~dp0Tracer-Backend.bat""
+start "Tracer API" cmd /k ""%~dp0Tracer-API.bat""
 
 REM Small delay so the API has time to start before the UI connects
 timeout /t 3 /nobreak >nul
 
 REM Launch frontend in a new window
-start "Tracer Frontend" cmd /k ""%~dp0Tracer-Frontend.bat""
+start "Tracer UI" cmd /k ""%~dp0Tracer-UI.bat""
 
 endlocal
