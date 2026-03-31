@@ -7,6 +7,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { getGraph } from '../api/graph'
 import GraphCanvas from '../components/GraphCanvas'
 import NodePanel from '../components/NodePanel'
+import { SelectButton } from 'primereact/selectbutton'
+import { Button } from '@/components/ui/button'
 
 const LAYOUTS = [
   { key: 'cose',         label: '⊛ Force' },
@@ -76,24 +78,18 @@ export default function Canvas() {
         </span>
 
         {/* Layout picker */}
-        <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
-          {LAYOUTS.map((l, i) => (
-            <button key={l.key} onClick={() => setLayout(l.key)}
-              className={`px-2.5 py-1.5 transition-colors ${i > 0 ? 'border-l border-gray-200' : ''} ${
-                layout === l.key
-                  ? 'bg-gray-900 text-white'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}>
-              {l.label}
-            </button>
-          ))}
-        </div>
+        <SelectButton
+          value={layout}
+          onChange={(e) => e.value && setLayout(e.value)}
+          options={LAYOUTS}
+          optionLabel="label"
+          optionValue="key"
+          className="text-xs"
+        />
 
-        <button onClick={fetchGraph} disabled={isLoading}
-          className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-600
-                     hover:bg-gray-50 disabled:opacity-50 transition-colors">
+        <Button variant="outline" onClick={fetchGraph} disabled={isLoading} size="sm">
           Refresh
-        </button>
+        </Button>
       </div>
 
       {/* ── Canvas + panel ── */}
@@ -105,9 +101,7 @@ export default function Canvas() {
             <div className="absolute inset-0 flex items-center justify-center z-10">
               <div className="bg-white border border-red-200 rounded-xl p-6 text-center shadow-sm max-w-sm">
                 <p className="text-sm text-red-600 mb-3">{error}</p>
-                <button onClick={fetchGraph} className="text-sm text-blue-600 hover:underline">
-                  Try again
-                </button>
+                <Button variant="link" onClick={fetchGraph}>Try again</Button>
               </div>
             </div>
           )}

@@ -11,14 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { DataTable } from 'primereact/datatable'
+import { Column } from 'primereact/column'
 
 export default function NodeList() {
   const [rows, setRows]           = useState([])
@@ -53,6 +47,16 @@ export default function NodeList() {
 
   useEffect(() => { load() }, [load])
   useEffect(() => { setPage(0) }, [typeFilter, nameFilter])
+
+  const typeBody = (row) => {
+    const c = colourForType(row.node_type?.node_type_identifier)
+    return (
+      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border"
+        style={{ background: c.bg, borderColor: c.border, color: c.text }}>
+        {row.node_type?.node_type_identifier || '—'}
+      </span>
+    )
+  }
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -89,38 +93,12 @@ export default function NodeList() {
           <div className="m-6 text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3">{error}</div>
         )}
         {!isLoading && !error && (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {['Type', 'Identifier', 'Name', 'Created'].map((h) => (
-                  <TableHead key={h}>{h}</TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => {
-                const c = colourForType(row.node_type?.node_type_identifier)
-                return (
-                  <TableRow key={row.id}>
-                    <TableCell>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border"
-                        style={{ background: c.bg, borderColor: c.border, color: c.text }}>
-                        {row.node_type?.node_type_identifier || '—'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-xs font-mono text-muted-foreground">{row.node_identifier}</TableCell>
-                    <TableCell className="text-xs">{row.node_name}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{row.created_on?.slice(0, 10)}</TableCell>
-                  </TableRow>
-                )
-              })}
-              {rows.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-8">No nodes found</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <DataTable value={rows} dataKey="id" size="small" stripedRows emptyMessage="No nodes found">
+            <Column header="Type" body={typeBody} />
+            <Column field="node_identifier" header="Identifier" bodyClassName="text-xs font-mono text-muted-foreground" />
+            <Column field="node_name" header="Name" bodyClassName="text-xs" />
+            <Column header="Created" body={(row) => row.created_on?.slice(0, 10)} bodyClassName="text-xs text-muted-foreground" />
+          </DataTable>
         )}
       </div>
 

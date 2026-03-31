@@ -1,11 +1,5 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { DataTable as PrimeDataTable } from 'primereact/datatable'
+import { Column } from 'primereact/column'
 
 export default function DataTable({ columns, rows, actions, isLoading, error, emptyMessage = 'No records found' }) {
   if (isLoading) {
@@ -36,30 +30,32 @@ export default function DataTable({ columns, rows, actions, isLoading, error, em
 
   return (
     <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {columns.map((col) => (
-              <TableHead key={col.key}>{col.label}</TableHead>
-            ))}
-            {actions && <TableHead className="text-right">Actions</TableHead>}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row, i) => (
-            <TableRow key={row.id ?? i}>
-              {columns.map((col) => (
-                <TableCell key={col.key}>
-                  {col.render ? col.render(row) : (row[col.key] ?? '—')}
-                </TableCell>
-              ))}
-              {actions && (
-                <TableCell className="text-right">{actions(row)}</TableCell>
-              )}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <PrimeDataTable
+        value={rows}
+        size="small"
+        stripedRows
+        dataKey="id"
+        emptyMessage={emptyMessage}
+        className="text-sm"
+      >
+        {columns.map((col) => (
+          <Column
+            key={col.key}
+            field={col.key}
+            header={col.label}
+            body={(row) => (col.render ? col.render(row) : (row[col.key] ?? '—'))}
+          />
+        ))}
+        {actions && (
+          <Column
+            header="Actions"
+            body={(row) => actions(row)}
+            bodyClassName="text-right"
+            headerClassName="text-right"
+            style={{ width: '1%' }}
+          />
+        )}
+      </PrimeDataTable>
     </div>
   )
 }

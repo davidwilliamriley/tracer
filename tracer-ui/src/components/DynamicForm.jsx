@@ -13,6 +13,7 @@
  */
 import { useState, useEffect } from 'react'
 import { updateNodeProperties } from '../api/graph'
+import { Button } from '@/components/ui/button'
 
 // Map property definition types to appropriate HTML input types
 const INPUT_TYPE_MAP = {
@@ -135,15 +136,14 @@ export default function DynamicForm({ schema, existingProperties, nodeId, onSave
         </div>
       )}
 
-      <button
+      <Button
         type="submit"
         disabled={isSaving}
-        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium
-                   hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed
-                   transition-colors"
+        loading={isSaving}
+        className="w-full"
       >
-        {isSaving ? 'Saving…' : saveSuccess ? 'Saved!' : 'Save changes'}
-      </button>
+        {saveSuccess ? 'Saved!' : 'Save changes'}
+      </Button>
     </form>
   )
 }

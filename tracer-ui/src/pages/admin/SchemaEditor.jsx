@@ -9,6 +9,7 @@ import {
 } from '../../api/admin'
 import ConfirmDialog from '../../components/admin/ConfirmDialog'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -39,14 +40,23 @@ function AssignmentRow({ assignment, onUpdate, onRemove }) {
       />
 
       <div className="flex-1 min-w-0">
-        <div className="text-xs font-medium text-foreground truncate">
-          {assignment.node_property_definition?.node_property_definition_name
-          ?? assignment.edge_property_definition?.edge_property_definition_name
-          ?? assignment.node_property_definition_id_fk?.slice(0, 8)
-          ?? '—'}
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="text-xs font-medium text-foreground truncate">
+            {assignment.property_name
+            ?? assignment.node_property_definition?.node_property_definition_name
+            ?? assignment.edge_property_definition?.edge_property_definition_name
+            ?? assignment.node_property_definition_id_fk?.slice(0, 8)
+            ?? '—'}
+          </div>
+          {assignment.property_missing && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 leading-none text-amber-700 border-amber-300 bg-amber-50 shrink-0">
+              Missing definition
+            </Badge>
+          )}
         </div>
         <div className="text-[10px] text-muted-foreground">
-          {assignment.node_property_definition?.node_property_definition_type
+          {assignment.property_type
+          ?? assignment.node_property_definition?.node_property_definition_type
           ?? assignment.edge_property_definition?.edge_property_definition_type
           ?? ''}
         </div>
@@ -111,6 +121,31 @@ export default function SchemaEditor() {
     )
   )
   const availableDefs = allDefs.filter((d) => !assignedDefIds.has(String(d.id)))
+
+  const defsById = new Map(allDefs.map((d) => [String(d.id), d]))
+  const displayAssignments = assignments.map((a) => {
+    const defId = String(
+      a.node_property_definition_id_fk ?? a.edge_property_definition_id_fk ?? ''
+    )
+    const def = defsById.get(defId)
+    const propertyName = entityType === 'node'
+      ? def?.node_property_definition_name
+      : def?.edge_property_definition_name
+    const propertyType = entityType === 'node'
+      ? def?.node_property_definition_type
+      : def?.edge_property_definition_type
+    const nestedPropertyName =
+      a.node_property_definition?.node_property_definition_name
+      ?? a.edge_property_definition?.edge_property_definition_name
+    const propertyMissing = !propertyName && !nestedPropertyName
+
+    return {
+      ...a,
+      property_name: propertyName,
+      property_type: propertyType,
+      property_missing: propertyMissing,
+    }
+  })
 
   const reloadAssignments = () => {
     if (!selectedType) return
@@ -233,7 +268,7 @@ export default function SchemaEditor() {
                     No properties assigned — add one below
                   </div>
                 ) : (
-                  assignments.map((a) => (
+                  displayAssignments.map((a) => (
                     <AssignmentRow
                       key={a.id}
                       assignment={a}

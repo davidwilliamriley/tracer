@@ -1,33 +1,37 @@
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { Dialog } from 'primereact/dialog'
+import { Button } from 'primereact/button'
 
 export default function ConfirmDialog({ title, message, confirmLabel = 'Delete', onConfirm, onCancel, isLoading }) {
+  const footer = (
+    <div className="flex items-center justify-end gap-2">
+      <Button
+        label="Cancel"
+        outlined
+        onClick={onCancel}
+        disabled={isLoading}
+      />
+      <Button
+        label={isLoading ? 'Deleting...' : confirmLabel}
+        severity="danger"
+        onClick={onConfirm}
+        loading={isLoading}
+        disabled={isLoading}
+      />
+    </div>
+  )
+
   return (
-    <AlertDialog open onOpenChange={(open) => { if (!open) onCancel() }}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{message}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
-            disabled={isLoading}
-            className="bg-destructive text-white hover:bg-destructive/90"
-          >
-            {isLoading ? 'Deleting…' : confirmLabel}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <Dialog
+      visible
+      modal
+      header={title}
+      onHide={onCancel}
+      closable={!isLoading}
+      closeOnEscape={!isLoading}
+      style={{ width: '28rem', maxWidth: '92vw' }}
+      footer={footer}
+    >
+      <p className="text-sm text-muted-foreground">{message}</p>
+    </Dialog>
   )
 }
