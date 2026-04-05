@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     # Database
     # ------------------------------------------------------------------
-    database_url: str = "sqlite:///./data/graph.db"
+    database_url: str = "sqlite:///./db/graph.db"
     # For PostgreSQL: postgresql://user:password@host:5432/dbname
 
     # ------------------------------------------------------------------
